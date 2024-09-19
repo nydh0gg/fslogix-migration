@@ -14,6 +14,8 @@ REM ::  Destination of converted profile
 set     profiledestination=\\file-share\profiles
 REM ::  Location of directory containing FSLogix installation files (specifically FSLogixAppsSetup.exe)
 set     fslogixinstall=\\file-share\FSLogixInstall
+REM ::  This is the windows username of the user that is to be migrated, this may be changed depending on your environment
+set     identifier=%username%
 REM ::  //////////////////////////////////////////////////////////////////
 
 echo //////////////////////////////////////////////////////////////////
@@ -42,7 +44,7 @@ REM ::  Perform profile migration
 echo //////////////////////////////////////////////////////////////////
 echo Converting local user profile to FSLogix profile container...
 cd C:\Program Files\FSLogix\Apps
-frx.exe copy-profile -filename %tempdir%\Profile_%computername%.vhdx -username %domain%%computername% -dynamic 1 -vhdx-sector-size 4096 -verbose
+frx.exe copy-profile -filename %tempdir%\Profile_%identifier%.vhdx -username %domain%%identifier% -dynamic 1 -vhdx-sector-size 4096 -verbose
 
 echo FSLogix profile conversion process ended...
 
@@ -72,14 +74,14 @@ echo //////////////////////////////////////////////////////////////////
 
 REM ::  Map network location then move converted profile to it
 pushd "%profiledestination%"
-md "%profiledestination\%computername%"
-esentutl /y "%tempdir%\Profile_%computername%.vhdx" /d "%profiledestination%\%computername%\Profile_%computername%.vhdx" /o
+md "%profiledestination%\%identifier%"
+esentutl /y "%tempdir%\Profile_%identifier%.vhdx" /d "%profiledestination%\%identifier%\Profile_%identifier%.vhdx" /o
 echo Profile file moved to %profiledestination%
 
 REM :: Grant user owner and FA permissions to user's new directory and files within
 echo Adjusting File and Folder Permissions...
-icacls "%profiledestination%\%computername%" /setowner "%domain%%computername%" /t
-icacls "%profilesdestination%\%computername%" /grant "%domain%%computername%":(OI)(CI)f /t
+icacls "%profiledestination%\%identifier%" /setowner "%domain%%identifier%" /t
+icacls "%profilesdestination%\%identifier%" /grant "%domain%%identifier%":(OI)(CI)f /t
 popd
 
 echo //////////////////////////////////////////////////////////////////
@@ -114,7 +116,7 @@ REM ::  Error 0x000000522 - Required priviledge not met, user needs to re-run .b
 REM ::  Error 0x000000002 - Re-run profile migration, this error will resolve itself on 2nd run
 :002
     echo Resolving Error 02 by re-attempting profile migration...
-    frx.exe copy-profile -filename %tempdir%\Profile_%computername%.vhdx -username %domain%%computername% -dynamic 1 -vhdx-sector-size 4096 -verbose
+    frx.exe copy-profile -filename %tempdir%\Profile_%identifier%.vhdx -username %domain%%identifier% -dynamic 1 -vhdx-sector-size 4096 -verbose
     goto :eof
 
 REM ::  Error 0x000000052 - Robocopy Error, erroneous file will need to be manually deleted
@@ -125,10 +127,13 @@ REM ::  Error 0x000000052 - Robocopy Error, erroneous file will need to be manua
 
 REM ::  Unable to resolve username or SID not specified - FRX Profile migration error, caused by incorrect DOMAIN username
 :SID
-    echo Username "%computername%" is not valid, please copy this script to the users desktop and do a text replcement for the computername variable with the users apropriate username
+    echo Username "%identifier%" is not valid, please copy this script to the users desktop and do a text replcement for the computername variable with the users apropriate username
     pause
     exit
 
+REM ::
+REM ::
+REM ::  //////////////////////////////////////////////////////////////////
 REM ::
 REM ::
 REM ::  //////////////////////////////////////////////////////////////////
